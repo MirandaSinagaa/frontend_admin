@@ -1,8 +1,8 @@
 // src/context/AuthContext.jsx
 
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import axios from 'axios'; // <-- Impor axios biasa untuk login
-import axiosClient from '../api/axiosClient'; // <-- Impor API Client kita
+import axios from 'axios'; 
+import axiosClient from '../api/axiosClient'; 
 
 // 1. Buat Context-nya
 const AuthContext = createContext();
@@ -11,72 +11,90 @@ const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(() => localStorage.getItem('authToken') || null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true); 
 
-  // Efek ini berjalan saat token berubah
+  // Efek ini berjalan saat komponen dimuat (untuk cek token lama)
   useEffect(() => {
-    if (token) {
-      localStorage.setItem('authToken', token);
-
-      // Ambil data pengguna dari API menggunakan token
-      // Kita gunakan endpoint /profile
-      axiosClient.get('/profile') // [cite: 953]
+    const storedToken = localStorage.getItem('authToken');
+    if (storedToken) {
+      setToken(storedToken);
+      axiosClient.get('/profile')
         .then(response => {
-          setUser(response.data); // Simpan data pengguna
+          setUser(response.data); 
         })
         .catch(error => {
-          console.error("Gagal mengambil profil:", error);
-          localStorage.removeItem('authToken'); // Hapus token buruk
+          console.error("Token lama tidak valid:", error);
+          localStorage.removeItem('authToken'); 
           setToken(null);
           setUser(null);
         })
         .finally(() => {
-          setIsLoading(false); // Selesai loading
+          setIsLoading(false); 
         });
-
     } else {
-      // Jika tidak ada token
-      localStorage.removeItem('authToken');
-      setUser(null);
-      setIsLoading(false); // Selesai loading
+      setIsLoading(false); 
     }
-  }, [token]); // Bergantung pada 'token'
+  }, []); 
 
-  // Fungsi untuk Login
+  // Fungsi untuk menyimpan data setelah login/register
+  const setUserAndToken = (userData, userToken) => {
+    localStorage.setItem('authToken', userToken);
+    setToken(userToken);
+    setUser(userData);
+  };
+
+  /**
+   * Fungsi untuk Login.
+   */
   const login = async (email, password) => {
-    // Kita HARUS pakai axios biasa untuk login (endpoint publik)
     const response = await axios.post('http://127.0.0.1:8000/api/login', {
       email,
       password,
     });
+    setUserAndToken(response.data.user, response.data.token);
+  };
 
-    // Jika sukses, simpan token.
-    // useEffect di atas akan otomatis berjalan.
-    setToken(response.data.token);
+  /**
+   * Fungsi untuk Register.
+   */
+  const register = async (payload) => {
+    const response = await axios.post('http://127.0.0.1:8000/api/register', payload);
+    setUserAndToken(response.data.user, response.data.token);
   };
 
   // Fungsi untuk Logout
   const logout = async () => {
     try {
-      // Panggil endpoint /logout (endpoint aman, pakai axiosClient)
-      await axiosClient.post('/logout'); [cite_start]// [cite: 958]
+      await axiosClient.post('/logout');
     } catch (error) {
       console.error("Logout gagal:", error);
     } finally {
-      setToken(null); 
+      localStorage.removeItem('authToken');
+      setToken(null);
+      setUser(null);
     }
   };
 
+  // --- (PERUBAHAN) ---
+  /**
+   * Fungsi baru untuk mengupdate data user di state
+   * (Dipanggil setelah Edit Profil berhasil)
+   */
+  const updateUser = (newUserData) => {
+    setUser(newUserData);
+  };
+  // --- (AKHIR PERUBAHAN) ---
+
   // 3. Sediakan nilai-nilai ini
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, isLoading }}>
-      {/* Jangan render App sampai kita tahu status login-nya */}
+    <AuthContext.Provider value={{ user, token, login, logout, register, isLoading, updateUser }}>
+      {/* (PERUBAHAN) tambahkan 'updateUser' ke value */}
       {!isLoading && children}
     </AuthContext.Provider>
   );
 };
 
-// 4. Buat Custom Hook
+// 4. Buat Custom Hook (TETAP SAMA)
 export const useAuth = () => {
   return useContext(AuthContext);
 };

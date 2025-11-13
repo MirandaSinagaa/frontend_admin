@@ -1,3 +1,5 @@
+// src/pages/Laporan.jsx
+
 import React, { useState, useEffect } from 'react';
 import axiosClient from '../api/axiosClient';
 import jsPDF from 'jspdf';
@@ -5,7 +7,7 @@ import autoTable from 'jspdf-autotable';
 import ConfirmationModal from '../components/ConfirmationModal';
 import { toast } from 'react-hot-toast';
 
-// Opsi Filter
+// Opsi Filter (Tetap Sama)
 const currentYear = new Date().getFullYear();
 const currentMonth = new Date().getMonth() + 1;
 const years = [currentYear, currentYear - 1, currentYear - 2];
@@ -18,7 +20,7 @@ const months = [
   { value: 11, name: 'November' }, { value: 12, name: 'Desember' },
 ];
 
-// Helper untuk Paginasi
+// Helper Paginasi (Tetap Sama)
 const generatePageNumbers = (currentPage, lastPage, delta = 1) => {
   const range = [];
   for (let i = Math.max(2, currentPage - delta); i <= Math.min(lastPage - 1, currentPage + delta); i++) {
@@ -56,7 +58,7 @@ function Laporan() {
   const [paginationMeta, setPaginationMeta] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Fungsi formatRupiah
+  // Fungsi formatRupiah (Tetap Sama)
   const formatRupiah = (angka) => {
     if (!angka) return "Rp 0";
     return new Intl.NumberFormat('id-ID', {
@@ -70,7 +72,8 @@ function Laporan() {
   const fetchLaporan = async (bulan, tahun, page) => {
     setIsLoading(true);
     try {
-      const response = await axiosClient.get('/tagihan', {
+      // --- (PERBAIKAN) ---
+      const response = await axiosClient.get('/admin/tagihan', { // Tambah prefix /admin
         params: { 
           bulan: bulan, 
           tahun: tahun,
@@ -89,25 +92,22 @@ function Laporan() {
     }
   };
 
-  // useEffect
   useEffect(() => {
     fetchLaporan(selectedMonth, selectedYear, 1);
   }, []);
 
-  // handleFilterSubmit
   const handleFilterSubmit = () => {
     setCurrentPage(1); 
     fetchLaporan(selectedMonth, selectedYear, 1);
   };
 
-  // handlePageChange
   const handlePageChange = (newPage) => {
     if (newPage > 0 && newPage <= paginationMeta.last_page) {
       fetchLaporan(selectedMonth, selectedYear, newPage);
     }
   };
 
-  // Logika Modal Validasi
+  // Logika Modal Validasi (Manual Admin)
   const handleOpenValidationModal = (tagihan) => {
     setSelectedTagihanId(tagihan.tagihan_id);
     setSelectedKramaName(tagihan.krama?.name || "Warga Ini");
@@ -124,7 +124,8 @@ function Laporan() {
     handleCloseModal();
     setIsLoading(true);
     try {
-      await axiosClient.post('/pembayaran', {
+      // --- (PERBAIKAN) ---
+      await axiosClient.post('/admin/pembayaran', { // Tambah prefix /admin
         tagihan_id: tagihanId
       });
       toast.success("Tagihan berhasil divalidasi Lunas!");
@@ -137,7 +138,7 @@ function Laporan() {
     }
   };
   
-  // Fungsi PDF (Lengkap)
+  // Fungsi PDF (Tetap Sama)
   const handleDownloadSummaryPdf = () => {
     const doc = new jsPDF();
     doc.text(`Laporan Tagihan - ${months.find(m => m.value == selectedMonth).name} ${selectedYear}`, 14, 15);
@@ -271,7 +272,6 @@ function Laporan() {
           <div className="bg-white shadow-md rounded-lg overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
-                {/* Header tabel */}
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama Krama</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Banjar</th>
@@ -285,7 +285,6 @@ function Laporan() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {/* Isi tabel */}
                 {tagihanList.length > 0 ? (
                   tagihanList.map((tagihan) => (
                     <tr key={tagihan.tagihan_id}>
@@ -338,22 +337,16 @@ function Laporan() {
             </table>
           </div>
 
-          {/* ==========================================================
-                          (PAGINASI GAYA BARU)
-              ========================================================== 
-          */}
+          {/* Paginasi (Tetap Sama) */}
           {paginationMeta && paginationMeta.last_page > 1 && (
             <div className="flex items-center justify-between mt-4">
-              {/* Info Halaman */}
               <span className="text-sm text-gray-700">
                 Menampilkan <span className="font-semibold">{paginationMeta.from}</span>
                 {' '}sampai <span className="font-semibold">{paginationMeta.to}</span>
                 {' '}dari <span className="font-semibold">{paginationMeta.total}</span> hasil
               </span>
               
-              {/* Tombol Paginasi Baru */}
               <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                {/* Tombol Previous */}
                 <button
                   onClick={() => handlePageChange(currentPage - 1)}
                   disabled={currentPage === 1 || isLoading}
@@ -362,7 +355,6 @@ function Laporan() {
                   Sebelumnya
                 </button>
 
-                {/* Tombol Angka (dihasilkan oleh helper) */}
                 {generatePageNumbers(currentPage, paginationMeta.last_page).map((page, index) => {
                   if (page === '...') {
                     return (
@@ -380,8 +372,8 @@ function Laporan() {
                       disabled={isLoading}
                       className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium
                         ${isCurrent 
-                          ? 'z-10 bg-blue-600 text-white border-blue-600' // Halaman Aktif (Biru Solid)
-                          : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50' // Halaman Biasa
+                          ? 'z-10 bg-blue-600 text-white border-blue-600' 
+                          : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
                         }
                       `}
                     >
@@ -390,7 +382,6 @@ function Laporan() {
                   );
                 })}
 
-                {/* Tombol Next */}
                 <button
                   onClick={() => handlePageChange(currentPage + 1)}
                   disabled={currentPage === paginationMeta.last_page || isLoading}

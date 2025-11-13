@@ -1,3 +1,5 @@
+// src/pages/Dashboard.jsx
+
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -62,15 +64,12 @@ const chartOptions = {
 export default function Dashboard() {
   const { user } = useAuth();
   
-  // State untuk statistik
   const [stats, setStats] = useState(null);
   const [isStatsLoading, setIsStatsLoading] = useState(true);
 
-  // (BARU) State untuk Chart
-  const [chartData, setChartData] = useState(null); // Akan berisi { labels, datasets }
+  const [chartData, setChartData] = useState(null); 
   const [isChartLoading, setIsChartLoading] = useState(true);
 
-  // Fungsi untuk format Rupiah
   const formatRupiah = (angka) => {
     if (angka === null || angka === undefined) return "Rp 0";
     return new Intl.NumberFormat('id-ID', {
@@ -82,7 +81,8 @@ export default function Dashboard() {
 
   // useEffect untuk ambil data STATS (Kartu)
   useEffect(() => {
-    axiosClient.get('/dashboard-stats')
+    // --- (PERBAIKAN) ---
+    axiosClient.get('/admin/dashboard-stats') // Tambahkan prefix /admin
       .then(response => {
         setStats(response.data);
       })
@@ -94,17 +94,17 @@ export default function Dashboard() {
 
   // (BARU) useEffect untuk ambil data CHART
   useEffect(() => {
-    axiosClient.get('/dashboard-chart')
+    // --- (PERBAIKAN) ---
+    axiosClient.get('/admin/dashboard-chart') // Tambahkan prefix /admin
       .then(response => {
         const apiData = response.data;
-        // Format data untuk Chart.js
         setChartData({
           labels: apiData.labels,
           datasets: [
             {
               label: 'Total Tagihan (Rp)',
               data: apiData.data,
-              backgroundColor: 'rgba(54, 162, 235, 0.6)', // Biru
+              backgroundColor: 'rgba(54, 162, 235, 0.6)', 
               borderColor: 'rgba(54, 162, 235, 1)',
               borderWidth: 1,
             },
@@ -157,7 +157,7 @@ export default function Dashboard() {
         {isChartLoading ? (
           <div className="text-center p-10">Memuat data grafik...</div>
         ) : (
-          <div style={{ height: '300px' }}> {/* Beri tinggi agar chart terlihat */}
+          <div style={{ height: '300px' }}> 
             {chartData && (
               <Bar options={chartOptions} data={chartData} />
             )}

@@ -1,16 +1,17 @@
+// src/pages/DetailKrama.jsx
+
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom'; // useParams untuk ambil ID dari URL
+import { useParams, Link } from 'react-router-dom'; 
 import axiosClient from '../api/axiosClient';
 
 function DetailKrama() {
-  const { krama_id } = useParams(); // Ambil krama_id dari URL
+  const { krama_id } = useParams(); 
 
   const [krama, setKrama] = useState(null);
   const [history, setHistory] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Fungsi formatRupiah (copy dari Laporan.jsx)
   const formatRupiah = (angka) => {
     if (!angka) return "Rp 0";
     return new Intl.NumberFormat('id-ID', {
@@ -25,8 +26,8 @@ function DetailKrama() {
       setIsLoading(true);
       setError(null);
       try {
-        // Panggil API baru yang kita buat di KramaController
-        const response = await axiosClient.get(`/krama/${krama_id}/history`);
+        // --- (PERBAIKAN) ---
+        const response = await axiosClient.get(`/admin/krama/${krama_id}/history`); // Tambah prefix /admin
         setKrama(response.data.krama);
         setHistory(response.data.history);
       } catch (err) {
@@ -38,7 +39,7 @@ function DetailKrama() {
     };
 
     fetchKramaHistory();
-  }, [krama_id]); // Jalankan ulang jika krama_id berubah
+  }, [krama_id]); 
 
   if (isLoading) {
     return <div className="text-center p-10">Memuat data riwayat krama...</div>;
@@ -59,6 +60,10 @@ function DetailKrama() {
       {/* --- Bagian 1: Info Detail Krama --- */}
       <div className="bg-white p-6 rounded-lg shadow-md mb-6">
         <h1 className="text-3xl font-bold text-slate-900 mb-2">{krama?.name}</h1>
+        {/* (PERBAIKAN) Tambah Email */}
+        <p className="text-lg text-gray-600 mb-4">
+          Akun Login (Email): <span className="font-medium text-blue-600">{krama?.email || 'N/A'}</span>
+        </p>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 text-sm">
           <span className="text-gray-500">NIK</span>
           <span className="text-gray-900 font-medium">{krama?.nik}</span>

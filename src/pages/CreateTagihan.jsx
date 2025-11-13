@@ -1,22 +1,20 @@
+// src/pages/CreateTagihan.jsx
+
 import React, { useState, useEffect } from 'react';
 import axiosClient from '../api/axiosClient';
 
 function CreateTagihan() {
-  // --- STATE UNTUK DROPDOWN ---
   const [kramaList, setKramaList] = useState([]);
   const [selectedKramaId, setSelectedKramaId] = useState('');
 
-  // --- STATE UNTUK INFO BOX ---
   const [selectedKramaData, setSelectedKramaData] = useState(null);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
 
-  // --- STATE UNTUK FORM TAGIHAN ---
   const [tanggal, setTanggal] = useState('');
-  const [iuran, setIuran] = useState(''); // <-- (BARU) State untuk Iuran
+  const [iuran, setIuran] = useState(''); 
   const [dedosan, setDedosan] = useState('0');
   const [peturuhan, setPeturuhan] = useState('0');
 
-  // --- STATE UNTUK LOADING & NOTIFIKASI ---
   const [isListLoading, setIsListLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
@@ -25,12 +23,14 @@ function CreateTagihan() {
   // 1. Ambil daftar Krama (warga) saat komponen dimuat
   useEffect(() => {
     setIsListLoading(true);
-    axiosClient.get('/krama-list')
+    // --- (PERBAIKAN) ---
+    axiosClient.get('/admin/krama-list') // Tambah prefix /admin
       .then(response => {
         setKramaList(response.data);
       })
       .catch(error => {
         console.error("Error fetching krama list:", error);
+        // (Pesan error Anda berasal dari sini)
         setSubmitError("Gagal memuat daftar krama. Coba refresh halaman.");
       })
       .finally(() => {
@@ -42,7 +42,7 @@ function CreateTagihan() {
   useEffect(() => {
     if (!selectedKramaId) {
       setSelectedKramaData(null);
-      setIuran(''); // <-- (BARU) Kosongkan iuran jika tidak ada krama
+      setIuran(''); 
       return;
     }
 
@@ -50,25 +50,24 @@ function CreateTagihan() {
     setSubmitError(null);
     setSubmitSuccess(null);
     
-    axiosClient.get(`/krama/${selectedKramaId}`)
+    // --- (PERBAIKAN) ---
+    axiosClient.get(`/admin/krama/${selectedKramaId}`) // Tambah prefix /admin
       .then(response => {
         const kramaData = response.data.data;
         setSelectedKramaData(kramaData);
-        // --- (PERUBAHAN UTAMA) ---
-        // Otomatis isi Iuran berdasarkan data dari API
-        setIuran(kramaData.iuran_base || '0'); // <-- (BARU)
+        setIuran(kramaData.iuran_base || '0'); 
       })
       .catch(error => {
         console.error("Error fetching krama detail:", error);
         setSubmitError("Gagal memuat detail krama.");
         setSelectedKramaData(null);
-        setIuran(''); // <-- (BARU) Kosongkan iuran jika error
+        setIuran(''); 
       })
       .finally(() => {
         setIsDetailLoading(false);
       });
       
-  }, [selectedKramaId]); // <-- Tetap berjalan setiap ID berubah
+  }, [selectedKramaId]); 
 
   // 3. Fungsi untuk submit form tagihan
   const handleSubmitTagihan = async (e) => {
@@ -86,13 +85,14 @@ function CreateTagihan() {
     const payload = {
       krama_id: selectedKramaId,
       tanggal,
-      iuran: iuran || 0, // <-- (DIUBAH) Ambil dari state Iuran
+      iuran: iuran || 0, 
       dedosan: dedosan || 0,
       peturuhan: peturuhan || 0,
     };
     
     try {
-      await axiosClient.post('/tagihan', payload);
+      // --- (PERBAIKAN) ---
+      await axiosClient.post('/admin/tagihan', payload); // Tambah prefix /admin
       setSubmitSuccess("Tagihan baru berhasil dibuat!");
       resetForm();
 
@@ -110,15 +110,14 @@ function CreateTagihan() {
   
   // 4. Fungsi untuk reset form
   const resetForm = () => {
-    setSelectedKramaId(''); // Ini akan otomatis trigger useEffect #2
+    setSelectedKramaId(''); 
     setTanggal('');
-    setIuran(''); // <-- (BARU)
+    setIuran(''); 
     setDedosan('0');
     setPeturuhan('0');
     setSubmitError(null);
   };
 
-  // --- TAMPILAN (UI) ---
   return (
     <> 
       <h1 className="text-3xl font-bold mb-6">Buat Tagihan Baru</h1>
@@ -232,7 +231,7 @@ function CreateTagihan() {
               </div>
               
               {/* Input Peturuhan (Opsional) */}
-              <div className="md:col-start-1"> {/* (Layout) Pindah ke baris baru */}
+              <div className="md:col-start-1"> 
                 <label htmlFor="peturuhan" className="block text-sm font-medium text-gray-700">Peturuhan (Opsional)</label>
                 <input 
                   id="peturuhan" type="number" value={peturuhan} 
@@ -252,7 +251,7 @@ function CreateTagihan() {
               </button>
               <button
                 type="submit"
-                disabled={isSubmitting || !tanggal || !iuran} // Iuran sekarang juga dicek
+                disabled={isSubmitting || !tanggal || !iuran} 
                 className={`px-6 py-2 font-medium text-white rounded-md transition
                   ${(isSubmitting || !tanggal || !iuran)
                     ? 'bg-gray-400 cursor-not-allowed'

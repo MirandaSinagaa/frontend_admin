@@ -1,33 +1,29 @@
+// src/components/EditKramaModal.jsx
+
 import React, { useState, useEffect } from 'react';
 import axiosClient from '../api/axiosClient';
 
-/**
- * Komponen Modal untuk Edit Data Krama.
- * * Props:
- * - isOpen (boolean): Apakah modal sedang tampil.
- * - onClose (function): Fungsi untuk menutup modal.
- * - onSave (function): Fungsi untuk menyimpan perubahan (mengirim data form).
- * - kramaData (object): Data krama yang akan diedit.
- */
 function EditKramaModal({ isOpen, onClose, onSave, kramaData }) {
-  // State untuk data form
+  // State untuk data form Krama
   const [nik, setNik] = useState('');
   const [name, setName] = useState('');
   const [gender, setGender] = useState('laki-laki');
   const [status, setStatus] = useState('kramadesa');
   const [banjarId, setBanjarId] = useState('');
+  
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState(''); 
 
-  // State untuk daftar banjar (dropdown)
   const [banjarList, setBanjarList] = useState([]);
   const [isLoadingBanjars, setIsLoadingBanjars] = useState(true);
   
-  // (BARU) State untuk error di dalam modal
-  const [errors, setErrors] = useState(null);
+  const [errors, setErrors] = useState(null); 
 
   // 1. Ambil daftar Banjar saat komponen dimuat (sekali saja)
   useEffect(() => {
     setIsLoadingBanjars(true);
-    axiosClient.get('/banjar-list')
+    // --- (PERBAIKAN) ---
+    axiosClient.get('/admin/banjar-list') // Tambah prefix /admin
       .then(response => {
         setBanjarList(response.data);
       })
@@ -37,7 +33,7 @@ function EditKramaModal({ isOpen, onClose, onSave, kramaData }) {
       .finally(() => {
         setIsLoadingBanjars(false);
       });
-  }, []); // [] = Hanya berjalan sekali
+  }, []); 
 
   // 2. Isi form saat 'kramaData' (props) berubah
   useEffect(() => {
@@ -47,21 +43,24 @@ function EditKramaModal({ isOpen, onClose, onSave, kramaData }) {
       setGender(kramaData.gender || 'laki-laki');
       setStatus(kramaData.status || 'kramadesa');
       setBanjarId(kramaData.banjar?.banjar_id || '');
-      setErrors(null); // Bersihkan error lama
+      setEmail(kramaData.email || ''); 
+      setPassword(''); 
+      setErrors(null); 
     }
-  }, [kramaData]); // Jalankan setiap kali krama yang dipilih berubah
+  }, [kramaData]); 
 
   // 3. Fungsi untuk submit (memanggil onSave dari props)
   const handleSubmit = (e) => {
     e.preventDefault();
     
-    // Kirim data form ke parent (DaftarKrama.jsx)
     onSave({
       nik,
       name,
       gender,
       status,
-      banjar_id: banjarId
+      banjar_id: banjarId,
+      email,
+      password: password || null, 
     });
   };
 
@@ -70,23 +69,21 @@ function EditKramaModal({ isOpen, onClose, onSave, kramaData }) {
   }
 
   return (
-    // Overlay (latar belakang gelap)
     <div 
       className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
       onClick={onClose}
     >
       {/* Konten Modal */}
       <div 
-        className="bg-white rounded-lg shadow-xl w-full max-w-2xl m-4 transform"
+        className="bg-white rounded-lg shadow-xl w-full max-w-4xl m-4 transform"
         onClick={(e) => e.stopPropagation()}
       >
         <form onSubmit={handleSubmit}>
           {/* Header Modal */}
           <div className="flex items-center justify-between p-4 border-b">
-            <h3 className="text-xl font-semibold text-gray-900">Edit Data Krama</h3>
+            <h3 className="text-xl font-semibold text-gray-900">Edit Data Krama & Akun</h3>
             <button
-              type="button" // Tipe button agar tidak submit form
-              onClick={onClose}
+              type="button" onClick={onClose}
               className="text-gray-400 hover:text-gray-600"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -96,8 +93,11 @@ function EditKramaModal({ isOpen, onClose, onSave, kramaData }) {
           </div>
 
           {/* Body Modal (Form) */}
-          <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+
+            {/* --- KOLOM 1: DATA DIRI --- */}
+            <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6 p-4 border rounded-md">
+              <h3 className="md:col-span-2 text-lg font-semibold text-gray-800 border-b pb-2 mb-2">Data Kependudukan</h3>
               {/* NIK */}
               <div>
                 <label htmlFor="edit-nik" className="block text-sm font-medium text-gray-700">NIK</label>
@@ -154,13 +154,36 @@ function EditKramaModal({ isOpen, onClose, onSave, kramaData }) {
                 </div>
               </div>
             </div>
+
+            {/* --- KOLOM 2: DATA AKUN (BARU) --- */}
+            <div className="md:col-span-1 p-4 border rounded-md bg-yellow-50">
+              <h3 className="text-lg font-semibold text-gray-800 border-b border-yellow-200 pb-2 mb-4">Data Akun Login (User)</h3>
+              {/* Email */}
+              <div className="mb-4">
+                <label htmlFor="edit-email" className="block text-sm font-medium text-gray-700">Email</label>
+                <input
+                  id="edit-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+
+              {/* Password */}
+              <div>
+                <label htmlFor="edit-password" className="block text-sm font-medium text-gray-700">Password Baru</label>
+                <input
+                  id="edit-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+                  placeholder="(Biarkan kosong jika tidak ganti)" minLength="6"
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+            </div>
           </div>
 
           {/* Footer Modal (Tombol) */}
           <div className="flex items-center justify-end p-4 border-t space-x-3">
             <button
-              type="button" // Tipe button agar tidak submit
-              onClick={onClose}
+              type="button" onClick={onClose}
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
             >
               Batal

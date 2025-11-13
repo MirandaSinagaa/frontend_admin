@@ -1,7 +1,8 @@
 // src/pages/Login.jsx
 
 import React, { useState } from 'react';
-import { useAuth } from '../context/AuthContext'; // <-- BARU: Impor hook useAuth kita
+import { useAuth } from '../context/AuthContext'; // <-- Impor hook useAuth kita
+import { Link } from 'react-router-dom'; // <-- (PERUBAHAN) Impor Link
 
 function LoginPage() {
   const [email, setEmail] = useState('');
@@ -12,7 +13,7 @@ function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
 
   // Ambil fungsi 'login' dari context
-  const { login } = useAuth(); // <-- BARU: Jauh lebih bersih!
+  const { login } = useAuth(); // <-- Tetap sama
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -20,21 +21,20 @@ function LoginPage() {
     setIsLoading(true);
 
     try {
-      // <-- BARU: Cukup panggil fungsi login dari context
+      // <-- Tetap sama
       await login(email, password);
       
-      // Jika berhasil, context akan menangani penyimpanan token
-      // dan pengambilan data pengguna.
-      
-      // Kita tidak perlu redirect manual di sini,
-      // karena di langkah selanjutnya (Routing), kita akan
-      // membuat halaman ini otomatis redirect jika user sudah login.
-
     } catch (err) {
       // Tangkap error jika 'login' gagal (misal: password salah)
       console.error('Login gagal!', err);
       if (err.response && (err.response.status === 422 || err.response.status === 401)) {
-        setError(err.response.data.message || 'Email atau password salah.');
+        // (PERUBAHAN) Menyesuaikan pesan error dari backend
+        const errorData = err.response.data;
+        if (errorData.errors && errorData.errors.email) {
+          setError(errorData.errors.email[0]); // Pesan error dari ValidationException
+        } else {
+          setError(errorData.message || 'Email atau password salah.');
+        }
       } else {
         setError('Terjadi kesalahan pada server. Silakan coba lagi.');
       }
@@ -43,12 +43,10 @@ function LoginPage() {
     }
   };
 
-  // --- Tidak ada perubahan pada bagian JSX (tampilan) ---
-  // Tampilannya tetap sama bagusnya dengan sebelumnya
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
       <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-md">
-        <h1 className="text-2xl font-bold text-center">Admin Login</h1>
+        <h1 className="text-2xl font-bold text-center">Admin & User Login</h1>
         
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
@@ -100,6 +98,17 @@ function LoginPage() {
             </button>
           </div>
         </form>
+
+        {/* --- (PERUBAHAN) --- */}
+        {/* Tambahkan link ke halaman Registrasi */}
+        <p className="text-sm text-center text-gray-600">
+          Belum punya akun user?{' '}
+          <Link to="/register" className="font-medium text-blue-600 hover:text-blue-500">
+            Daftar di sini
+          </Link>
+        </p>
+        {/* --- (AKHIR PERUBAHAN) --- */}
+
       </div>
     </div>
   );
