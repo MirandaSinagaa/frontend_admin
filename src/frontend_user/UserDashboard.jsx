@@ -6,15 +6,14 @@ import axiosClient from '../api/axiosClient';
 import { Link } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 
-// (BARU) Komponen Kartu Statistik
+// --- (PERUBAHAN) ---
+// Komponen Kartu Statistik (disederhanakan)
+// Logika formatRupiah dihapus dari sini
 function StatCard({ title, value, isLoading }) {
-  const formatRupiah = (angka) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency', currency: 'IDR', minimumFractionDigits: 0
-    }).format(angka);
-  };
   
-  let displayValue = typeof value === 'number' ? formatRupiah(value) : value;
+  // (DIUBAH) 'displayValue' sekarang hanya 'value'
+  // Komponen ini tidak lagi memformat angka.
+  let displayValue = value;
   
   if (isLoading) {
     return (
@@ -31,8 +30,10 @@ function StatCard({ title, value, isLoading }) {
     </div>
   );
 }
+// --- (AKHIR PERUBAHAN) ---
 
-// (BARU) Komponen Kartu Aksi Cepat
+
+// Komponen Kartu Aksi Cepat (Tetap Sama)
 function ActionCard({ to, title, description, colorClass }) {
   return (
     <Link
@@ -56,9 +57,9 @@ function UserDashboard() {
   const [stats, setStats] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // (PERUBAHAN) Ambil statistik dari API baru
+  // useEffect (Tetap Sama)
   useEffect(() => {
-    axiosClient.get('/user/dashboard-stats') // <-- Panggil API baru
+    axiosClient.get('/user/dashboard-stats') 
       .then(response => {
         setStats(response.data);
       })
@@ -71,6 +72,7 @@ function UserDashboard() {
       });
   }, []);
   
+  // (PERUBAHAN) Logika formatRupiah tetap di sini (di induk)
   const formatRupiah = (angka) => {
     if (!angka) return "Rp 0";
     return new Intl.NumberFormat('id-ID', {
@@ -87,12 +89,18 @@ function UserDashboard() {
         Selamat datang di Dashboard Krama Anda.
       </p>
 
-      {/* (PERUBAHAN) Bagian Kartu Statistik */}
+      {/* Bagian Kartu Statistik */}
       <h2 className="text-2xl font-semibold text-slate-800 mb-4">Ringkasan Keuangan Anda</h2>
+      
+      {/* --- (PERUBAHAN) ---
+          Logika pemanggilan StatCard sudah benar,
+          karena 'formatRupiah()' hanya dipanggil untuk nominal uang.
+          'stats?.jumlah_tagihan_belum_lunas' (angka) akan ditampilkan sebagai angka.
+      --- (AKHIR PERUBAHAN) --- */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
         <StatCard 
           title="Total Tagihan Belum Lunas" 
-          value={isLoading ? 0 : formatRupiah(stats?.total_tagihan_belum_lunas)} 
+          value={isLoading ? "Rp 0" : formatRupiah(stats?.total_tagihan_belum_lunas)} 
           isLoading={isLoading} 
         />
         <StatCard 
@@ -102,7 +110,7 @@ function UserDashboard() {
         />
         <StatCard 
           title="Total Riwayat Pembayaran" 
-          value={isLoading ? 0 : formatRupiah(stats?.total_pembayaran_lunas)} 
+          value={isLoading ? "Rp 0" : formatRupiah(stats?.total_pembayaran_lunas)} 
           isLoading={isLoading} 
         />
         <StatCard 
@@ -112,7 +120,7 @@ function UserDashboard() {
         />
       </div>
 
-      {/* (PERUBAHAN) Bagian Aksi Cepat */}
+      {/* Bagian Aksi Cepat (Tetap Sama) */}
       <h2 className="text-2xl font-semibold text-slate-800 mb-4">Aksi Cepat</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <ActionCard
