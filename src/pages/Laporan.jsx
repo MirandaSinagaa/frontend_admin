@@ -50,6 +50,9 @@ const generatePageNumbers = (currentPage, lastPage, delta = 1) => {
 function Laporan() {
   const [tagihanList, setTagihanList] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  // State khusus untuk loading tombol export
+  const [isExporting, setIsExporting] = useState(false); 
+
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -68,12 +71,11 @@ function Laporan() {
     }).format(angka);
   };
 
-  // Fungsi fetchLaporan
+  // Fungsi fetchLaporan (Tetap Sama)
   const fetchLaporan = async (bulan, tahun, page) => {
     setIsLoading(true);
     try {
-      // --- (PERBAIKAN) ---
-      const response = await axiosClient.get('/admin/tagihan', { // Tambah prefix /admin
+      const response = await axiosClient.get('/admin/tagihan', { 
         params: { 
           bulan: bulan, 
           tahun: tahun,
@@ -96,18 +98,16 @@ function Laporan() {
     fetchLaporan(selectedMonth, selectedYear, 1);
   }, []);
 
+  // Handle (Tetap Sama)
   const handleFilterSubmit = () => {
     setCurrentPage(1); 
     fetchLaporan(selectedMonth, selectedYear, 1);
   };
-
   const handlePageChange = (newPage) => {
     if (newPage > 0 && newPage <= paginationMeta.last_page) {
       fetchLaporan(selectedMonth, selectedYear, newPage);
     }
   };
-
-  // Logika Modal Validasi (Manual Admin)
   const handleOpenValidationModal = (tagihan) => {
     setSelectedTagihanId(tagihan.tagihan_id);
     setSelectedKramaName(tagihan.krama?.name || "Warga Ini");
@@ -124,8 +124,7 @@ function Laporan() {
     handleCloseModal();
     setIsLoading(true);
     try {
-      // --- (PERBAIKAN) ---
-      await axiosClient.post('/admin/pembayaran', { // Tambah prefix /admin
+      await axiosClient.post('/admin/pembayaran', { 
         tagihan_id: tagihanId
       });
       toast.success("Tagihan berhasil divalidasi Lunas!");
@@ -135,6 +134,29 @@ function Laporan() {
       const errorMsg = error.response?.data?.message || "Validasi gagal. Mungkin tagihan ini sudah dibayar?";
       toast.error(errorMsg);
       setIsLoading(false);
+    }
+  };
+
+  // --- (BARU) FUNGSI EXPORT KE GOOGLE SHEET ---
+  const handleExportToSheet = async () => {
+    if(!confirm("Apakah Anda yakin ingin mengekspor 10 data terbaru ke Google Sheet?")) return;
+    
+    setIsExporting(true);
+    try {
+        // Panggil API Backend yang sudah kita buat
+        const response = await axiosClient.get('/admin/export-to-sheet');
+        
+        toast.success(response.data.message);
+        
+        // Buka link spreadsheet di tab baru agar admin bisa langsung lihat
+        if(response.data.spreadsheet_url) {
+            window.open(response.data.spreadsheet_url, '_blank');
+        }
+    } catch (error) {
+        console.error("Export failed:", error);
+        toast.error("Gagal mengekspor ke Google Sheet. Periksa konfigurasi server.");
+    } finally {
+        setIsExporting(false);
     }
   };
   
@@ -160,7 +182,6 @@ function Laporan() {
     });
     doc.save(`laporan_ringkasan_${selectedMonth}_${selectedYear}.pdf`);
   };
-
   const handleDownloadIndividualPdf = (tagihan) => {
     const doc = new jsPDF();
     const isLunas = tagihan.status_pembayaran !== 'belum_bayar';
@@ -190,8 +211,20 @@ function Laporan() {
     doc.setTextColor(0, 0, 0);
     doc.setFont(undefined, 'normal');
     doc.text(`Tanggal : ${tagihan.tanggal}`, 14, 88);
+    
+    let startY = 95; // Y-Position awal untuk tabel
+    
+    if (isLunas && tagihan.dibayar_oleh) {
+         let label = 'Dibayar oleh';
+         if (tagihan.dibayar_oleh.role === 'admin') {
+            label = 'Validasi Admin';
+         }
+         doc.text(`${label}: ${tagihan.dibayar_oleh.name}`, 14, 94);
+         startY = 101; 
+    }
+
     autoTable(doc, {
-      startY: 95, theme: 'grid',
+      startY: startY, theme: 'grid',
       head: [['Komponen Tagihan', 'Jumlah']],
       body: [
         ['Iuran Wajib', formatRupiah(tagihan.iuran)],
@@ -207,7 +240,6 @@ function Laporan() {
     const filename = `tagihan_${tagihan.krama?.name.replace(/ /g, '_')}_${tagihan.tanggal}.pdf`;
     doc.save(filename);
   };
-  // --- Akhir Fungsi PDF ---
 
   // --- TAMPILAN (UI) ---
   return (
@@ -222,20 +254,45 @@ function Laporan() {
         variant="primary" 
       />
 
-      {/* Header dan Filter */}
-      <div className="flex items-center justify-between mb-6">
+      {/* Header dan Tombol Aksi */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
         <h1 className="text-3xl font-bold">Laporan Tagihan</h1>
-        <button
-          onClick={handleDownloadSummaryPdf}
-          disabled={isLoading || tagihanList.length === 0}
-          className={`px-4 py-2 font-medium text-white rounded-md transition
-            ${(isLoading || tagihanList.length === 0) ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}
-          `}
-        >
-          Download Ringkasan (PDF)
-        </button>
+        
+        <div className="flex gap-2">
+            {/* (BARU) Tombol Export Google Sheet */}
+            <button
+              onClick={handleExportToSheet}
+              disabled={isExporting}
+              className={`px-4 py-2 font-medium text-white rounded-md transition flex items-center
+                ${isExporting ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}
+              `}
+            >
+              {isExporting ? (
+                  'Mengekspor...'
+              ) : (
+                  <>
+                    {/* Ikon Spreadsheet Sederhana */}
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    Export ke Sheet
+                  </>
+              )}
+            </button>
+
+            {/* Tombol PDF */}
+            <button
+              onClick={handleDownloadSummaryPdf}
+              disabled={isLoading || tagihanList.length === 0}
+              className={`px-4 py-2 font-medium text-white rounded-md transition flex items-center
+                ${(isLoading || tagihanList.length === 0) ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}
+              `}
+            >
+              Download PDF
+            </button>
+        </div>
       </div>
+
       <div className="bg-white p-4 rounded-lg shadow-md mb-6">
+        {/* ... (Filter Bulan/Tahun Tetap Sama) ... */}
         <div className="flex flex-wrap items-end gap-4">
           <div className="flex-1 min-w-[150px]">
             <label htmlFor="filter-bulan" className="block text-sm font-medium text-gray-700">Bulan</label>
@@ -285,6 +342,7 @@ function Laporan() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
+                {/* Isi tabel */}
                 {tagihanList.length > 0 ? (
                   tagihanList.map((tagihan) => (
                     <tr key={tagihan.tagihan_id}>
@@ -294,17 +352,32 @@ function Laporan() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatRupiah(tagihan.iuran)}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatRupiah(tagihan.dedosan)}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatRupiah(tagihan.peturuhan)}</td>
+                      
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
                         {tagihan.status_pembayaran === 'belum_bayar' ? (
                           <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
                             Belum Bayar
                           </span>
                         ) : (
-                          <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                            Lunas
-                          </span>
+                          <div>
+                            <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                              Lunas
+                            </span>
+                            {tagihan.dibayar_oleh && (
+                              tagihan.dibayar_oleh.role === 'admin' ? (
+                                <span className="block text-xs text-orange-600 mt-1 font-medium">
+                                  (Validasi: {tagihan.dibayar_oleh.name})
+                                </span>
+                              ) : (
+                                <span className="block text-xs text-blue-600 mt-1 font-medium">
+                                  (Dibayar: {tagihan.dibayar_oleh.name})
+                                </span>
+                              )
+                            )}
+                          </div>
                         )}
                       </td>
+                      
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">{formatRupiah(tagihan.total_tagihan)}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex flex-col space-y-2">
@@ -363,7 +436,6 @@ function Laporan() {
                       </span>
                     );
                   }
-
                   const isCurrent = page === currentPage;
                   return (
                     <button
