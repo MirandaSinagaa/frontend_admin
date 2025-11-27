@@ -7,7 +7,7 @@ import { Link } from 'react-router-dom'; // <-- (PERUBAHAN) Impor Link
 function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  console.log("Base URL Debug:", import.meta.env.VITE_API_BASE_URL);
+  
   // State ini sekarang HANYA untuk form ini
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
