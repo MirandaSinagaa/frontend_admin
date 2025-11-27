@@ -2,26 +2,18 @@
 
 import axios from 'axios';
 
-// Deteksi apakah kita sedang di Vercel (Production) atau di Laptop (Development)
-const isProduction = import.meta.env.MODE === 'production';
-
-// Tentukan Base URL berdasarkan mode
-const baseURL = isProduction 
-  ? 'https://adminbillingkrama.onrender.com/api'  // URL RENDER (Online)
-  : 'http://127.0.0.1:8000/api';                 // URL LOCALHOST (Laptop)
-
-console.log("Environment Mode:", import.meta.env.MODE);
-console.log("Axios Base URL:", baseURL);
-
+// Buat instance Axios baru
 const axiosClient = axios.create({
-  baseURL: baseURL, 
+  // (PERBAIKAN) Gunakan Logika Pintar ini:
+  // Cek apakah ada VITE_API_BASE_URL (dari Vercel)? Jika ada pakai itu.
+  // Jika tidak ada, baru pakai localhost.
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api',
   headers: {
     'Accept': 'application/json',
     'Content-Type': 'application/json',
   },
 });
 
-// Interceptor Request (Tetap Sama)
 axiosClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('authToken');
@@ -35,7 +27,6 @@ axiosClient.interceptors.request.use(
   }
 );
 
-// Interceptor Response (Tetap Sama)
 axiosClient.interceptors.response.use(
   (response) => {
     return response;
