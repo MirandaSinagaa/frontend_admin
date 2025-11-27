@@ -7,7 +7,7 @@ const axiosClient = axios.create({
   // (PERBAIKAN) Gunakan Logika Pintar ini:
   // Cek apakah ada VITE_API_BASE_URL (dari Vercel)? Jika ada pakai itu.
   // Jika tidak ada, baru pakai localhost.
-  baseURL: 'https://adminbillingkrama.onrender.com', 
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api',
   headers: {
     'Accept': 'application/json',
     'Content-Type': 'application/json',
