@@ -4,8 +4,9 @@ import axios from 'axios';
 
 // Buat instance Axios baru
 const axiosClient = axios.create({
-  // Tetapkan URL dasar untuk semua permintaan
-  baseURL: 'http://127.0.0.1:8000/api', 
+  // (PERUBAHAN PENTING) Gunakan variabel lingkungan VITE_API_BASE_URL
+  // Jika tidak ada (di localhost tanpa .env), fallback ke localhost
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api', 
   headers: {
     'Accept': 'application/json',
     'Content-Type': 'application/json',
@@ -21,7 +22,7 @@ axiosClient.interceptors.request.use(
 
     // Jika token ada, tambahkan ke header Authorization
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`; // Sesuai format Bearer Token [cite: 882]
+      config.headers.Authorization = `Bearer ${token}`; 
     }
 
     return config;
@@ -32,7 +33,7 @@ axiosClient.interceptors.request.use(
   }
 );
 
-// (Opsional tapi disarankan) Tambahkan "interceptor" respons
+// Tambahkan "interceptor" respons
 // Ini menangani error global, seperti jika token kita kedaluwarsa
 axiosClient.interceptors.response.use(
   (response) => {
@@ -48,7 +49,7 @@ axiosClient.interceptors.response.use(
       
       // Redirect ke halaman login
       // Kita beri sedikit pesan agar pengguna tahu
-      alert('Sesi Anda telah berakhir. Silakan login kembali.');
+      // alert('Sesi Anda telah berakhir. Silakan login kembali.'); // Opsional: disable alert jika mengganggu
       window.location.href = '/login'; 
     }
 
